@@ -1,6 +1,57 @@
 ---
 version: "3.7"
 services:
+  confidentialbackend:
+    image: ghcr.io/uwcirg/helloworld-confidential-client-sof:${CONFIDENTIALBACKEND_IMAGE_TAG:-latest}
+    env_file:
+      confidentialbackend.env
+    environment:
+      REQUEST_CACHE_URL: redis://redis:6379/1
+      SESSION_REDIS: redis://redis:6379/0
+
+      # client ID regisered with SoF host (Keycloak)
+      SOF_CLIENT_ID: confidentialbackend_openid_client
+      PREFERRED_URL_SCHEME: https
+      # ultimate destination after SoF launch and backend auth
+      # i.e. the confidentialfrontend:
+      LAUNCH_DEST: 'https://confidentialfrontend.${BASE_DOMAIN:-localtest.me}/launch.html'
+
+      # do not pass launch/patient of Epic will infer standalone launch
+      SOF_CLIENT_SCOPES: "patient/*.read launch openid profile roles"
+      SOF_ACCESS_TOKEN_URL: 'https://keycloak.${BASE_DOMAIN:-localtest.me}/auth/realms/fEMR/protocol/openid-connect/token'
+      SOF_AUTHORIZE_URL: 'https://keycloak.${BASE_DOMAIN:-localtest.me}/auth/realms/fEMR/protocol/openid-connect/auth'
+      LOGSERVER_URL: "https://logs.${BASE_DOMAIN:-localtest.me}"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.confidentialbackend-${COMPOSE_PROJECT_NAME}.rule=Host(`confidentialbackend.${BASE_DOMAIN:-localtest.me}`)"
+      - "traefik.http.routers.confidentialbackend-${COMPOSE_PROJECT_NAME}.entrypoints=websecure"
+      - "traefik.http.routers.confidentialbackend-${COMPOSE_PROJECT_NAME}.tls=true"
+      - "traefik.http.routers.confidentialbackend-${COMPOSE_PROJECT_NAME}.tls.certresolver=letsencrypt"
+    networks:
+      - ingress
+      - internal
+    depends_on:
+      - redis
+
+  confidentialfrontend:
+    image: ghcr.io/uwcirg/helloworld-react-client-sof:${CONFIDENTIALFRONTEND_IMAGE_TAG:-latest}
+    environment:
+      REACT_APP_BACKEND_URL: "https://confidentialbackend.${BASE_DOMAIN:-localtest.me}"
+      REACT_APP_CLIENT_ID: confidentialfrontend
+      REACT_APP_DASHBOARD_URL: "https://femr.${BASE_DOMAIN:-localtest.me}"
+    depends_on:
+      - fhir
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.confidentialfrontend-${COMPOSE_PROJECT_NAME}.rule=Host(`confidentialfrontend.${BASE_DOMAIN:-localtest.me}`)"
+      - "traefik.http.routers.confidentialfrontend-${COMPOSE_PROJECT_NAME}.entrypoints=websecure"
+      - "traefik.http.routers.confidentialfrontend-${COMPOSE_PROJECT_NAME}.tls=true"
+      - "traefik.http.routers.confidentialfrontend-${COMPOSE_PROJECT_NAME}.tls.certresolver=letsencrypt"
+    networks:
+      - ingress
+      - internal
+
+
   db:
     image: postgres:${POSTGRES_IMAGE_TAG:-12}
     environment:
@@ -32,7 +83,7 @@ services:
       MAP_API: "http://fhir-internal:8080/fhir/"
       # FHIR URL passed to SoF client
       SOF_HOST_FHIR_URL: 'https://fhirwall.${BASE_DOMAIN:-localtest.me}/fhir'
-      SOF_CLIENTS: '[{"id":"PUBCLIENT", "label":"React Client", "launch_url":"https://pubclient.${BASE_DOMAIN:-localtest.me}/launch.html"},{"id":"VUECLIENT", "label":"Vue Client", "launch_url":"https://vueclient.${BASE_DOMAIN:-localtest.me}/launch.html", "required_roles": ["clinician"]}]'
+      SOF_CLIENTS: '[{"id":"PUBCLIENT", "label":"React Public Client", "launch_url":"https://pubclient.${BASE_DOMAIN:-localtest.me}/launch.html"},{"id":"CONFIDENTIALCLIENT", "label":"React Confidential Client", "launch_url":"https://confidentialbackend.${BASE_DOMAIN:-localtest.me}/auth/launch"},{"id":"VUECLIENT", "label":"Vue Public Client", "launch_url":"https://vueclient.${BASE_DOMAIN:-localtest.me}/launch.html", "required_roles": ["clinician"]}]'
       LOGSERVER_URL: "https://logs.${BASE_DOMAIN:-localtest.me}"
       REDIS_URL: redis://redis:6379/1
     depends_on:
@@ -40,6 +91,7 @@ services:
       - keycloak
       - logs
       - redis
+      - confidentialbackend
       - pubclient
       - vueclient
     labels:
@@ -102,6 +154,8 @@ services:
       # NB accessControlAllowOrigin is deprecated, but not noted in docs
       # https://github.com/traefik/traefik/issues/8796
       - "traefik.http.middlewares.fhirwall-${COMPOSE_PROJECT_NAME}-cors.headers.accessControlAllowOriginList=*"
+      # allow all verbs used by FHIR REST
+      - "traefik.http.middlewares.fhirwall-${COMPOSE_PROJECT_NAME}-cors.headers.accessControlAllowMethods=HEAD,GET,OPTIONS,PATCH,POST,PUT,DELETE"
       - "traefik.http.middlewares.fhirwall-${COMPOSE_PROJECT_NAME}-cors.headers.accessControlAllowHeaders=Authorization,Origin,Content-Type,Accept"
       - "traefik.http.routers.fhirwall-${COMPOSE_PROJECT_NAME}.middlewares=fhirwall-${COMPOSE_PROJECT_NAME}-cors"
 
@@ -195,8 +249,9 @@ services:
 
   pubclient:
     image: ghcr.io/uwcirg/helloworld-react-client-sof:${PUBCLIENT_IMAGE_TAG:-latest}
-    env_file:
-      - pubclient.env
+    environment:
+      REACT_APP_DASHBOARD_URL: "https://femr.${BASE_DOMAIN:-localtest.me}"
+      REACT_APP_CLIENT_ID: pubclient
     depends_on:
       - fhir
     labels:
