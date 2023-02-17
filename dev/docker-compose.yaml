@@ -260,20 +260,19 @@ services:
     env_file:
       - auth-proxy.env
     labels:
-      traefik.enable: "true"
-      traefik.http.routers.auth-proxy.rule: Host(`auth-proxy.${BASE_DOMAIN:-localtest.me}`) || PathPrefix(`/oauth2`)
-      traefik.http.routers.auth-proxy.entrypoints: websecure
-      traefik.http.routers.auth-proxy.tls.certresolver: letsencrypt
-      traefik.http.routers.auth-proxy.tls: "true"
+      - traefik.enable=true
+      - traefik.http.routers.auth-proxy-${COMPOSE_PROJECT_NAME}.rule=Host(`auth-proxy.${BASE_DOMAIN:-localtest.me}`) || PathPrefix(`/oauth2`)
+      - traefik.http.routers.auth-proxy-${COMPOSE_PROJECT_NAME}.middlewares=oidc-auth
+      - traefik.http.routers.auth-proxy-${COMPOSE_PROJECT_NAME}.entrypoints=websecure
+      - traefik.http.routers.auth-proxy-${COMPOSE_PROJECT_NAME}.tls=true
+      - traefik.http.routers.auth-proxy-${COMPOSE_PROJECT_NAME}.tls.certresolver=letsencrypt
 
       # oauth2-proxy does not EXPOSE the ports it listens on, requiring explicit traefik configuration
-      traefik.http.services.auth-proxy.loadbalancer.server.port: 4180
+      - traefik.http.services.auth-proxy-${COMPOSE_PROJECT_NAME}.loadbalancer.server.port=4180
 
-      traefik.http.middlewares.oidc-auth.forwardAuth.address: http://auth-proxy-${COMPOSE_PROJECT_NAME}:4180/
-      traefik.http.middlewares.oidc-auth.forwardAuth.trustForwardHeader: "true"
-      # TODO block Authorization header for postgrest using custom middleware
-      traefik.http.middlewares.oidc-auth.forwardAuth.authResponseHeaders: X-Auth-Request-User,X-Auth-Request-Email,X-Auth-Request-Access-Token,Authorization
-
+      - traefik.http.middlewares.oidc-auth.forwardAuth.address=http://auth-proxy-${COMPOSE_PROJECT_NAME}:4180/
+      - traefik.http.middlewares.oidc-auth.forwardAuth.trustForwardHeader=true
+      - traefik.http.middlewares.oidc-auth.forwardAuth.authResponseHeaders=X-Auth-Request-User,X-Auth-Request-Email,X-Auth-Request-Access-Token,Authorization
     networks:
       ingress:
         aliases:
