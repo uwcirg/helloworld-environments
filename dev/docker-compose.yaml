@@ -255,8 +255,8 @@ services:
       OAUTH2_PROXY_OIDC_ISSUER_URL: https://keycloak.${BASE_DOMAIN:-localtest.me}/auth/realms/fEMR
 
       # security settings
-      OAUTH2_PROXY_COOKIE_DOMAINS: ${BASE_DOMAIN:-localtest.me}
-      OAUTH2_PROXY_WHITELIST_DOMAINS: ${BASE_DOMAIN:-localtest.me}
+      OAUTH2_PROXY_COOKIE_DOMAINS: .${BASE_DOMAIN:-localtest.me}
+      OAUTH2_PROXY_WHITELIST_DOMAINS: .${BASE_DOMAIN:-localtest.me}
     env_file:
       - auth-proxy.env
     labels:
