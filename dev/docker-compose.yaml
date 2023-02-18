@@ -297,9 +297,16 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.logs-${COMPOSE_PROJECT_NAME}.rule=Host(`logs.${BASE_DOMAIN:-localtest.me}`)"
+      # chain postgrest-specifc middleware, after oidc-auth
+      - traefik.http.routers.logs-${COMPOSE_PROJECT_NAME}.middlewares=oidc-auth-${COMPOSE_PROJECT_NAME},remove-authz-header
       - "traefik.http.routers.logs-${COMPOSE_PROJECT_NAME}.entrypoints=websecure"
       - "traefik.http.routers.logs-${COMPOSE_PROJECT_NAME}.tls=true"
       - "traefik.http.routers.logs-${COMPOSE_PROJECT_NAME}.tls.certresolver=letsencrypt"
+
+      # unset Authorization header on all requests to postgrest
+      # postgrest implements its own auth which conflicts with oauth2-proxy
+      - traefik.http.middlewares.remove-authz-header.headers.customrequestheaders.Authorization=
+
     environment:
       PGRST_DB_URI: postgres://postgres:postgres@db:5432/app_db
       PGRST_DB_SCHEMA: api
