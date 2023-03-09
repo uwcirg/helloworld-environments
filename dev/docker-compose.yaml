@@ -80,6 +80,7 @@ services:
       OIDC_TOKEN_INTROSPECTION_URI: "https://keycloak.${BASE_DOMAIN:-localtest.me}/auth/realms/fEMR/protocol/openid-connect/token/introspect"
       # TODO change to INTERNAL_FHIR_API
       MAP_API: 'https://fhirwall.${BASE_DOMAIN:-localtest.me}/fhir/'
+      NEED_PATIENT_BANNER: "true"
       # FHIR URL passed to SoF client
       SOF_HOST_FHIR_URL: 'https://fhirwall.${BASE_DOMAIN:-localtest.me}/fhir'
       SOF_CLIENTS: '[{"id":"PUBCLIENT", "label":"React Public Client", "launch_url":"https://pubclient.${BASE_DOMAIN:-localtest.me}/launch.html"},{"id":"CONFIDENTIALCLIENT", "label":"React Confidential Client", "launch_url":"https://confidentialbackend.${BASE_DOMAIN:-localtest.me}/auth/launch"},{"id":"VUECLIENT", "label":"Vue Public Client", "launch_url":"https://vueclient.${BASE_DOMAIN:-localtest.me}/launch.html", "required_roles": ["clinician"]}]'
