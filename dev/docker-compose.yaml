@@ -36,7 +36,7 @@ services:
   confidentialfrontend:
     image: ghcr.io/uwcirg/helloworld-react-client-sof:${CONFIDENTIALFRONTEND_IMAGE_TAG:-latest}
     environment:
-      REACT_APP_BACKEND_URL: "https://confidentialbackend.${BASE_DOMAIN:-localtest.me}"
+      REACT_APP_CONF_API_URL: "https://confidentialbackend.${BASE_DOMAIN:-localtest.me}"
       REACT_APP_CLIENT_ID: confidentialfrontend
       REACT_APP_DASHBOARD_URL: "https://femr.${BASE_DOMAIN:-localtest.me}"
     depends_on:
